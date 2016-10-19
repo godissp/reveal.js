@@ -41,17 +41,127 @@
 			<!-- Any section element inside of this container is displayed as a slide -->
 			<div class="slides">
 				<section>
-					<h1>GrowUp</h1>
+					<h2>模块化之路</h2>
 					<p>在线预定前端框架</p>
+					<aside class="notes">
+						大家好，我今天要讲的内容是在线预订模块化之路。当然在我来途牛之前，在线预订的模块化工作就已经开始了，包括用requirejs做模块的动态加载，用backbone做mvc等等。
+						所以今天的内容更注重的是在现有技术体系的基础上，如何做好业务功能的模块化。
+					</aside>
 				</section>
 				<section>
-					<ul>
-						<li class="fragment grow">模块复用</li>
-						<li class="fragment grow">模块可配</li>
-						<li class="fragment grow">代码可维护性</li>
-						<li class="fragment grow">优化开发体验</li>
-					</ul>
+					<section>
+						<h2>原有架构</h2>
+						<ul>
+							<li class="fragment grow">backbone——model(collection)</li>
+							<li class="fragment grow">backbone——view</li>
+							<li class="fragment grow">other components</li>
+							<li class="fragment grow">main.js(粘合剂)</li>
+						</ul>
+						<aside class="notes">
+							先来看看原有架构，在重构之前，我们的代码里有以下几个部分：backbone-model作为业务模块的数据模型，backbone-view用来实现视图渲染以及监听，一些无状态的模块作为组件供其他模块消费，然后就是最关键的main.js.
+							为什么说main.js是最关键的呢，我们往下看。
+						</aside>
+					</section>
+					<section>
+						<h2>main.js</h2>
+						<ul>
+							<li class="fragment grow">初始化</li>
+							<li class="fragment grow">全局事件监听</li>
+							<li class="fragment grow">模块之间通信</li>
+						</ul>
+						<aside class="notes">
+							在main.js中，首先对个model和view进行了初始化操作，通过backbone的监听机制，对各模块进行监听，以进行一些全局操作或者跨模块操作。
+							可以说是整个架构的粘合剂。
+						</aside>
+					</section>
+					<section>
+						<h2>问题</h2>
+						<ul>
+							<li class="fragment grow">模块事件绑定的地方未知，不易定位</li>
+							<li class="fragment grow">main.js功能不单一，且命令式的编码方式导致不易维护</li>
+							<li class="fragment grow">跨模块公共数据未能得到很好的维护</li>
+						</ul>
+						<aside class="notes">
+							原有架构基本实现了代码的mvc分层，但实际开发中仍存在一些问题：
+							1.首先，由于各模块内的事件是通过this.trigger('event')触发的，导致了除了main.js之外任何地方都可以绑定模块事件。由于没有一个硬性集中的地方管理页面事件，导致日常开发不易调试。
+							2.main.js作为页面的粘合剂，功能不够纯粹，且命令式的编码方式在面临模块增减等情况下，不易维护，很容易导致bug的发生。
+							3.对于跨模块公共数据的变更，各模块独立维护，未能有一个统一的地方进行维护。
+						</aside>
+					</section>
 				</section>
+
+				<section>
+					<section>
+						<h2>新的架构</h2>
+						<ul>
+							<li class="fragment grow">pageModules</li>
+							<li class="fragment grow">eventBus</li>
+							<li class="fragment grow">backbone extention</li>
+						</ul>
+						<aside class="notes">
+							基于上面的问题，我做了一下几点工作，首先是pageModules
+						</aside>
+					</section>
+					<section>
+						<h2>pageModules</h2>
+						<aside class="notes">
+							新的框架中，将业务模块强制的定义为由三个部分组成：
+							1.model
+							2.view
+							3.tpl
+							在boss3_modules中按文件夹进行划分
+							pageModules模块会自动的根据一个叫做modules.json的文件对模块进行加载、初始化。
+							这样做的好处是，既可以减去模块初始化的重复操作，也可以对模块进行动态依赖管理。通过简单的增减modules.json来配置页面所依赖的模块。
+							然后是eventBus
+						</aside>
+					</section>
+					<section>
+						<h2>eventBus</h2>
+						<a href="http://wiki.tuniu.org/display/INT/eventBus+API">document</a>
+						<aside class="notes">
+							eventBus作为页面的事件中枢，代替了原来的main.js的角色。与main.js不同的是，在新的框架中，我们要求将eventBus做为一个事件触发器，强制
+							注入到各个子业务模块中。所有的模块间通信事件只能通过eventBus.bind来进行绑定，并通过eventBus.trigger来触发。
+							事件是通过key-value的形式绑定在eventBus上的，这样我们便可以维护一个整体的事件对象，通过配置的方式增减页面事件。
+							需要提到的是eventBus实现了一个套middleware的机制，通过增加自定义middlware,可以实现页面事件的日志、依赖管理等操作。
+							此外eventBus还提供了异步事件流程管理、事件节流等实用功能，在此就不一一赘述了，需要详细了解，并充分利用eventBus的功能可参看api文档。
+						</aside>
+					</section>
+					<section>
+						<h2>backbone extension</h2>
+						<ul>
+							<li class="fragment grow">appExt</li>
+							<li class="fragment grow">modelExt</li>
+							<li class="fragment grow">viewExt</li>
+						</ul>
+						<aside class="notes">
+							此外为了优化开发体验，在原有backbone的基础上做了一些扩展。
+							appExt在backbone对象上扩展了一个app属性,作为全局model。
+							modelExt在model的实例中增加了appModelEvents属性用以对全局model的变化事件进行监听。
+							viewExt则是在view的实例上增加了modelEvents属性用以定义model属性的变化事件。
+							有了以上扩展，在面临多模块公用数据变化的时候，只需要在各个模块中定义好全局属性的监听操作，便可以省去手动在pageEvent里触发各模块数据变更的操作。
+						</aside>
+					</section>
+					<section>
+						<pre><code contenteditable>
+	appModelEvents:{
+		'change:totalPrice':this.calculate
+	}
+						</code></pre>
+					</section>
+					<section>
+						<pre><code contenteditable>
+	modelEvents:{
+		'change:isShow':this.showOrHide,
+		'change:data':this.render
+	},
+						</code></pre>
+					</section>
+				</section>
+				<section>
+					<img data-src="images/data-flow.png" >
+				</section>
+
+
 				<section>
 					<section>
 						<img src="images/modules.png" alt=""/>
@@ -80,6 +190,17 @@
 						<li class="fragment">日志调试</li>
 						<li class="fragment">异步事件节流</li>
 					</ul>
+				</section>
+				<section>
+					<h2>模块化的意义</h2>
+					<ul>
+						<li class="fragment grow">解决命名冲突</li>
+						<li class="fragment grow">代码复用</li>
+						<li class="fragment grow">提高代码可维护性</li>
+					</ul>
+					<aside class="notes">
+						模块化的意义，大致有以下几点：解决前端命名冲突、方便代码复用、提高代码可维护性，这里就不详细讲解了。
+					</aside>
 				</section>
 			</div>
 
