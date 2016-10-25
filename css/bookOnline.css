@@ -1,0 +1,10 @@
+@keyframes rotate360
+{
+    from {transform: rotate(0deg) translateZ(-10000px);}
+    to {transform: rotate(720deg) translateZ(0px)}
+}
+
+.present>.rotate{
+    animation:rotate360 1.5s;
+    animation-fill-mode : forwards
+}
