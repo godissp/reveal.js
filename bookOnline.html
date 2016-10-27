@@ -69,14 +69,14 @@
 					</section>
 					<section>
 					<pre><code contenteditable>
-		eventBus.bind({
-			eventA:function(v){
-				return v+' done';
-			}
-		})
-		var result = eventBus.trigger('eventA','hello world');
-		console.log(result.retuanValue)
-		//hello world done
+	eventBus.bind({
+		eventA:function(v){
+			return v+' done';
+		}
+	})
+	var result = eventBus.trigger('eventA','hello world');
+	console.log(result.retuanValue)
+	//hello world done
 					</code></pre>
 						<aside class="notes">
 							这是一段最简单的eventBus使用示例
@@ -88,16 +88,16 @@
 					</section>
 					<section>
 					<pre><code contenteditable>
-		var pageEvent = require('pageEvent')
-		eventBus.addMiddleware(require('depMiddleware')({
-			modulesArray:config.pageDataObj.modulesArray,
-			dependence:dependence,
-			log:true
-		}))
-		eventBus.addMiddleware(require('logMiddleware'))
-		eventBus.bind(pageEvent);
-		eventBus.trigger('firstInit')
-		eventBus.trigger('asyncInit')
+	var pageEvent = require('pageEvent')
+	eventBus.addMiddleware(require('depMiddleware')({
+		modulesArray:config.pageDataObj.modulesArray,
+		dependence:dependence,
+		log:true
+	}))
+	eventBus.addMiddleware(require('logMiddleware'))
+	eventBus.bind(pageEvent);
+	eventBus.trigger('firstInit')
+	eventBus.trigger('asyncInit')
 					</code></pre>
 						<aside class="notes">
 							再来看看在我们的在线预订项目中，通过eventBus绑定了一个叫做pageEvent的全局事件对象，便实现了控制器的作用。
@@ -111,10 +111,10 @@
 					</section>
 					<section>
 						<pre><code contenteditable>
-			eventBus.triggerAsyncOnce('eventA','hello world1');
-			eventBus.triggerAsyncOnce('eventA','hello world2');
-			eventBus.triggerAsyncOnce('eventA','hello world3');
-			//只会触发参数为hello world3的eventA事件
+	eventBus.triggerAsyncOnce('eventA','hello world1');
+	eventBus.triggerAsyncOnce('eventA','hello world2');
+	eventBus.triggerAsyncOnce('eventA','hello world3');
+	//只会触发参数为hello world3的eventA事件
 						</code></pre>
 						<aside class="notes">
 							这里还要介绍一个triggerAsyncOnce方法，事件节流函数。
@@ -140,9 +140,9 @@
 					</section>
 					<section>
 						<pre><code contenteditable>
-			appModelEvents:{
-				'change:totalPrice':this.calculate
-			}
+	appModelEvents:{
+		'change:totalPrice':this.calculate
+	}
 						</code></pre>
 						<aside class="notes">
 							在各个子模型中，通过配置appModelEvent配置项，可实现全局模型的状态监听，这就把一些多对多的状态依赖关系，转换成了多对一的依赖关系
@@ -151,15 +151,16 @@
 					</section>
 					<section>
 						<pre><code contenteditable>
-			modelEvents:{
-				'change:isShow':this.showOrHide,
-				'change:data':this.render
-			}
+	modelEvents:{
+		'change:isShow':this.showOrHide,
+		'change:data':this.render
+	}
 						</code></pre>
 						<aside class="notes">
 							另外，为了方便，在各个view中我也加入了一个modelEvents的配置项，用来监听model的变化，这样就省去了
 							大家手动监听model的过程。
 						</aside>
+					</section>
 				</section>
 				<section>
 					<div>
