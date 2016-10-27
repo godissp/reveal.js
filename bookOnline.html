@@ -47,206 +47,329 @@
 					<p>在线预定前端框架重构</p>
 					<aside class="notes">
 						大家好，我今天要讲的内容是在模块化编程在线预订前端框架重构,这也是这段时间杰哥交给我等主要工作。
-						说到模块化,其实在我来途牛之前，我们在线预订的模块化工作就已经展开并完成很多了，
-						其中包括用requirejs做模块的动态加载，用backbone做前端的mvc等等等等。
-						所以今天,我要讲的内容并不是安利一波模块化的概念,而是如何现有技术体系的基础上，做好模块化编程。
+						说到模块化,其实在我来途牛之前，我们在线预订的模块化工作就已经展开并完成很多了。
+						因此这段时间，我的工作更多的是对原有技术体系的优化。下面来看看我们的工程做了哪些改变。
 					</aside>
 				</section>
 				<section>
 					<section>
-						<h2>原有架构</h2>
-						<ul>
-							<li class="fragment grow">backbone——model(collection)</li>
-							<li class="fragment grow">backbone——view</li>
-							<li class="fragment grow">main.js</li>
-							<li class="fragment grow">service</li>
-						</ul>
+						<div>
+							<span>main.js</span>
+							<span> → </span>
+							<span><a href="http://10.10.36.108/eventBus.html">EventBus</a></span>
+						</div>
 						<aside class="notes">
-							那么首先我们来看一看在线预订前端的原有架构.
-							在重构之前，我们的代码里有以下几个部分：
-							首先是backbone-model,作为各个业务模块的数据模型，mvc 的 m
-							其次是backbone-view,它用来实现各个模块的视图渲染以及监听的工作,mvc的v
-							然后是 main.js ,它的作用更接近于mvc 的 c,controller;但其实除了作为控制器以外,它还包含了页面各个模块的初始化工作.
-							最后是service ,集成页面所有的ajax调用.
-							当然,除了这四个主要角色之外,还有一些零碎的文件不在本次话题的讨论之内.
+							由于有兼容低版本ie的需求，在pc端我们一直都是用backbone来做前端的mvc的
+							但事实上从我个人理解backbone并没有提供一个完备的mvc方案，在C的层面也就是controller控制器的层面。
+							backbone并没有提供一个很好的角色类供我们完成页面事件分发以及状态管理。
+							在原有架构中，main.js仅仅是通过手动绑定模块事件来达到模块间通信的一个作用。
+							这样做既不利于调试，同时也缺少了状态管理的机制，维护起来难度也更大。
+							因此我开发了eventBus专注于页面的事件管理。和backbone结合起来充当控制器的角色。
 						</aside>
 					</section>
-
-					<section  data-transition="none">
-						<div style="transform: translateZ(-10000px);font-size: 500px;" class="rotate">?</div>
-						<aside class="notes">
-							这已经是一个比较完整的模块化方案,那么是否有可以改进的地方呢?
-						</aside>
-					</section>
-					<!--<section  data-background="white">-->
-						<!--<image src="images/lizi.jpg" style="border: none;box-shadow: none"/>-->
-						<!--<aside class="notes">-->
-							<!--我们先来举个例子,-->
-						<!--</aside>-->
-					<!--</section>-->
 					<section>
-						<div>开放关闭原则</div>
+					<pre><code contenteditable>
+		eventBus.bind({
+			eventA:function(v){
+				return v+' done';
+			}
+		})
+		var result = eventBus.trigger('eventA','hello world');
+		console.log(result.retuanValue)
+		//hello world done
+					</code></pre>
 						<aside class="notes">
-							这里需要提到一个概念,叫做开放关闭原则.
-							开放关闭原则,是设计模式中的一个概念.具体指的式对扩展开放,对修改关闭.
-							在我们互联网行业快速迭代的开发模式中,我们的系统经常会进行升级,开放关闭原则主张的就是,当我们需要对代码进行修改的时候,
-							尽量不要修改原有的代码,而是在原有代码的基础上,进行扩展.这样可以有效的减少系统升级所带来的错误发生率.
+							这是一段最简单的eventBus使用示例
+							通过bind方法绑定eventA事件，
+							然后在任何一个引入eventBus的地方trigger eventA事件，便可执行事件内容得到返回值。
+							当然除了基础的用法，eventBus还提供了
+							异步事件流程控制、事件节流、中间件扩展、频道扩展事件广播等高级功能。感兴趣的同学可以自己去看看api，也欢迎随时与我交流。
 						</aside>
 					</section>
-
 					<section>
-						<h2>main.js</h2>
-						<ul>
-							<li class="fragment grow">命令式的事件绑定方式</li>
-							<li class="fragment grow">不易扩展</li>
-							<li class="fragment grow">职责不单一</li>
-						</ul>
+					<pre><code contenteditable>
+		var pageEvent = require('pageEvent')
+		eventBus.addMiddleware(require('depMiddleware')({
+			modulesArray:config.pageDataObj.modulesArray,
+			dependence:dependence,
+			log:true
+		}))
+		eventBus.addMiddleware(require('logMiddleware'))
+		eventBus.bind(pageEvent);
+		eventBus.trigger('firstInit')
+		eventBus.trigger('asyncInit')
+					</code></pre>
 						<aside class="notes">
-							秉承着这个原则,我们再来看看main.js,会发现这类角色文件有以下几个问题:
-							命令式的事件绑定方式,代码不易扩展,与初始化过程放到一起,职责不单一.
+							再来看看在我们的在线预订项目中，通过eventBus绑定了一个叫做pageEvent的全局事件对象，便实现了控制器的作用。
+							日常开发中，只需要维护这个pageEvent事件对象，便可以增减控制器功能。
+							大家可能注意到了，在这段代码中我调用了两次eventBus的addMiddleware方法，addMiddleware可为eventBus
+							添加自定义中间件，管理事件发生过程中的状态变更和依赖。这里我加入了一个日志中间打印事件日志，和一个depMiddleware来进行模块依赖管理。
 						</aside>
 					</section>
-
 					<section>
-						<h2>拆分main.js</h2>
-						<ul>
-							<li class="fragment grow">evenBus</li>
-							<li class="fragment grow">pageModules</li>
-						</ul>
+						<img src="images/relate.png" alt="" style="border: none;box-shadow: none"/>
+					</section>
+					<section>
+						<pre><code contenteditable>
+			eventBus.triggerAsyncOnce('eventA','hello world1');
+			eventBus.triggerAsyncOnce('eventA','hello world2');
+			eventBus.triggerAsyncOnce('eventA','hello world3');
+			//只会触发参数为hello world3的eventA事件
+						</code></pre>
 						<aside class="notes">
-							针对以上问题,我对main.js的功能进行的拆分.
-							首先将模块初始化的过程独立开来,并通过pageModules读取module.json文件的方式,自动加载初始化各个业务模块.
-							然后用eventBus绑定pageEvent事件对象,充当控制器的角色.
+							这里还要介绍一个triggerAsyncOnce方法，事件节流函数。
+							在我们的系统中，各个模块之间的状态往往是互相影响的，例如优惠信息模块，当我们更改保险、登陆、修改人数、单房差等等操作
+							都需要发起一次优惠信息更新的操作。这就导致了一些经常性的操作会导致发起多次优惠信息的请求，影响到了页面的性能。
+							鉴于这种情况，只需要将发起优惠组合请求的操作单独封装成一个事件，再通过triggerAsyncOnce函数触发，就可以保证在一次
+							js事件周期内的所有触发都会被省略只保留最后一次事件触发进行调用。
 						</aside>
 					</section>
+				</section>
+				<section>
+					<section>
+						<div>
+							<span>Backbone</span>
+							<span> → </span>
+							<span class="fragment highlight-red">Backbone With Extension</span>
+						</div>
+						<aside class="notes">
+							改变的第二点是对Backbone做了一定程度的扩展，在之前的页面中，我们各个模块的数据都是独立维护的，对于页面公共状态，并没有做到
+							很好的维护，当一些全局状态变更时，我们的做法是通过控制器来分发操作各个模块的模型变化，这样做当遇到很复杂的数据变更时代码将变得
+							很难维护。因此在新的架构中，我加入了一些backbone的扩展。维护了一个全局模型对象并注入到了Backbone.app中。
+						</aside>
+					</section>
+					<section>
+						<pre><code contenteditable>
+			appModelEvents:{
+				'change:totalPrice':this.calculate
+			}
+						</code></pre>
+						<aside class="notes">
+							在各个子模型中，通过配置appModelEvent配置项，可实现全局模型的状态监听，这就把一些多对多的状态依赖关系，转换成了多对一的依赖关系
+							实际开发中更易维护。
+						</aside>
+					</section>
+					<section>
+						<pre><code contenteditable>
+			modelEvents:{
+				'change:isShow':this.showOrHide,
+				'change:data':this.render
+			}
+						</code></pre>
+						<aside class="notes">
+							另外，为了方便，在各个view中我也加入了一个modelEvents的配置项，用来监听model的变化，这样就省去了
+							大家手动监听model的过程。
+						</aside>
+				</section>
+				<section>
+					<div>
+						<span>Callback</span>
+						<span> → </span>
+						<span class="fragment highlight-red">Promise</span>
+					</div>
+					<aside class="notes">
+						然后就是Callback转promise，Promise的好处我这里就不赘述了，为了避免回调地狱，做异步流程控制。
+						这里值得提起的是，其实eventBus也实现了一个类Promise的接口，可以进行异步事件的流程管理，详情可以看看api。
+					</aside>
+				</section>
+				<section>
+					<div>
+						<span>RequireJs</span>
+						<span> → </span>
+						<span class="fragment highlight-red">Webpack</span>
+					</div>
+					<aside class="notes">
+						最后就是模块管理器的变更，require是一项伟大的发明，他的出现让javascript制作多人维护的大型项目变成了事实。
+						但在面临更高的性能要求的时候，require的纯异步加载会产生阻力，因此我们考虑用webpack进行替换。
+						与requirejs不同webpack在上线之前，便做了代码的静态打包，在打包的过程中，
+						可以根据配置项进行代码合并、混淆、拆分、转化等不同种类的优化工作。
+						有其loader和plugin是可以扩展的，因此在实际项目中可根据实际需求对各个模块的代码进行预处理。
+						举个栗子，在webpack中可加入eslint-loader对代码进行规范，避免低级bug的发生。
+					</aside>
+				</section>
+				<section>
+					<ul>
+						<li></li>
+					</ul>
+
+
+				</section>
+
+
+
+				<!--<section  data-transition="none">-->
+					<!--<div style="transform: translateZ(-10000px);font-size: 500px;" class="rotate">?</div>-->
+					<!--<aside class="notes">-->
+					<!--</aside>-->
+				<!--</section>-->
+				<!--<section  data-background="white">-->
+					<!--<image src="images/lizi.jpg" style="border: none;box-shadow: none"/>-->
+					<!--<aside class="notes">-->
+						<!--我们先来举个例子,-->
+					<!--</aside>-->
+				<!--</section>-->
+				<!--<section>-->
+					<!--<div>开放关闭原则</div>-->
+					<!--<aside class="notes">-->
+						<!--这里需要提到一个概念,叫做开放关闭原则.-->
+						<!--开放关闭原则,是设计模式中的一个概念.具体指的式对扩展开放,对修改关闭.-->
+						<!--在我们互联网行业快速迭代的开发模式中,我们的系统经常会进行升级,开放关闭原则主张的就是,当我们需要对代码进行修改的时候,-->
+						<!--尽量不要修改原有的代码,而是在原有代码的基础上,进行扩展.这样可以有效的减少系统升级所带来的错误发生率.-->
+					<!--</aside>-->
+				<!--</section>-->
+
+				<!--<section>-->
+					<!--<h2>main.js</h2>-->
+					<!--<ul>-->
+						<!--<li class="fragment grow">命令式的事件绑定方式</li>-->
+						<!--<li class="fragment grow">不易扩展</li>-->
+						<!--<li class="fragment grow">职责不单一</li>-->
+					<!--</ul>-->
+					<!--<aside class="notes">-->
+						<!--秉承着这个原则,我们再来看看main.js,会发现这类角色文件有以下几个问题:-->
+						<!--命令式的事件绑定方式,代码不易扩展,与初始化过程放到一起,职责不单一.-->
+					<!--</aside>-->
+				<!--</section>-->
+
+				<!--<section>-->
+					<!--<h2>拆分main.js</h2>-->
+					<!--<ul>-->
+						<!--<li class="fragment grow">evenBus</li>-->
+						<!--<li class="fragment grow">pageModules</li>-->
+					<!--</ul>-->
+					<!--<aside class="notes">-->
+						<!--针对以上问题,我对main.js的功能进行的拆分.-->
+						<!--首先将模块初始化的过程独立开来,并通过pageModules读取module.json文件的方式,自动加载初始化各个业务模块.-->
+						<!--然后用eventBus绑定pageEvent事件对象,充当控制器的角色.-->
+					<!--</aside>-->
+				<!--</section>-->
+				<!--<section>-->
+					<!--<h2>问题</h2>-->
+					<!--<ul>-->
+						<!--<li class="fragment grow">模块事件绑定的地方未知，不易定位</li>-->
+						<!--<li class="fragment grow">main.js功能不单一，且命令式的编码方式导致不易维护</li>-->
+						<!--<li class="fragment grow">跨模块公共数据未能得到很好的维护</li>-->
+					<!--</ul>-->
+					<!--<aside class="notes">-->
+						<!--原有架构基本实现了代码的mvc分层，但实际开发中仍存在一些问题：-->
+						<!--1.首先，由于各模块内的事件是通过this.trigger('event')触发的，导致了除了main.js之外任何地方都可以绑定模块事件。由于没有一个硬性集中的地方管理页面事件，导致日常开发不易调试。-->
+						<!--2.main.js作为页面的粘合剂，功能不够纯粹，且命令式的编码方式在面临模块增减等情况下，不易维护，很容易导致bug的发生。-->
+						<!--3.对于跨模块公共数据的变更，各模块独立维护，未能有一个统一的地方进行维护。-->
+					<!--</aside>-->
+				<!--</section>-->
+
+				<!--<section>-->
 					<!--<section>-->
-						<!--<h2>问题</h2>-->
+						<!--<h2>新的架构</h2>-->
 						<!--<ul>-->
-							<!--<li class="fragment grow">模块事件绑定的地方未知，不易定位</li>-->
-							<!--<li class="fragment grow">main.js功能不单一，且命令式的编码方式导致不易维护</li>-->
-							<!--<li class="fragment grow">跨模块公共数据未能得到很好的维护</li>-->
+							<!--<li class="fragment grow">pageModules</li>-->
+							<!--<li class="fragment grow">eventBus</li>-->
+							<!--<li class="fragment grow">backbone extention</li>-->
 						<!--</ul>-->
 						<!--<aside class="notes">-->
-							<!--原有架构基本实现了代码的mvc分层，但实际开发中仍存在一些问题：-->
-							<!--1.首先，由于各模块内的事件是通过this.trigger('event')触发的，导致了除了main.js之外任何地方都可以绑定模块事件。由于没有一个硬性集中的地方管理页面事件，导致日常开发不易调试。-->
-							<!--2.main.js作为页面的粘合剂，功能不够纯粹，且命令式的编码方式在面临模块增减等情况下，不易维护，很容易导致bug的发生。-->
-							<!--3.对于跨模块公共数据的变更，各模块独立维护，未能有一个统一的地方进行维护。-->
+							<!--基于上面的问题，我做了一下几点工作，首先是pageModules-->
 						<!--</aside>-->
 					<!--</section>-->
-				</section>
-
-				<section>
-					<section>
-						<h2>新的架构</h2>
-						<ul>
-							<li class="fragment grow">pageModules</li>
-							<li class="fragment grow">eventBus</li>
-							<li class="fragment grow">backbone extention</li>
-						</ul>
-						<aside class="notes">
-							基于上面的问题，我做了一下几点工作，首先是pageModules
-						</aside>
-					</section>
-					<section>
-						<h2>pageModules</h2>
-						<aside class="notes">
-							新的框架中，将业务模块强制的定义为由三个部分组成：
-							1.model
-							2.view
-							3.tpl
-							在boss3_modules中按文件夹进行划分
-							pageModules模块会自动的根据一个叫做modules.json的文件对模块进行加载、初始化。
-							这样做的好处是，既可以减去模块初始化的重复操作，也可以对模块进行动态依赖管理。通过简单的增减modules.json来配置页面所依赖的模块。
-							然后是eventBus
-						</aside>
-					</section>
-					<section>
-						<h2>eventBus</h2>
-						<a href="http://wiki.tuniu.org/display/INT/eventBus+API">document</a>
-						<aside class="notes">
-							eventBus作为页面的事件中枢，代替了原来的main.js的角色。与main.js不同的是，在新的框架中，我们要求将eventBus做为一个事件触发器，强制
-							注入到各个子业务模块中。所有的模块间通信事件只能通过eventBus.bind来进行绑定，并通过eventBus.trigger来触发。
-							事件是通过key-value的形式绑定在eventBus上的，这样我们便可以维护一个整体的事件对象，通过配置的方式增减页面事件。
-							需要提到的是eventBus实现了一个套middleware的机制，通过增加自定义middlware,可以实现页面事件的日志、依赖管理等操作。
-							此外eventBus还提供了异步事件流程管理、事件节流等实用功能，在此就不一一赘述了，需要详细了解，并充分利用eventBus的功能可参看api文档。
-						</aside>
-					</section>
-					<section>
-						<h2>backbone extension</h2>
-						<ul>
-							<li class="fragment grow">appExt</li>
-							<li class="fragment grow">modelExt</li>
-							<li class="fragment grow">viewExt</li>
-						</ul>
-						<aside class="notes">
-							此外为了优化开发体验，在原有backbone的基础上做了一些扩展。
-							appExt在backbone对象上扩展了一个app属性,作为全局model。
-							modelExt在model的实例中增加了appModelEvents属性用以对全局model的变化事件进行监听。
-							viewExt则是在view的实例上增加了modelEvents属性用以定义model属性的变化事件。
-							有了以上扩展，在面临多模块公用数据变化的时候，只需要在各个模块中定义好全局属性的监听操作，便可以省去手动在pageEvent里触发各模块数据变更的操作。
-						</aside>
-					</section>
-					<section>
-						<pre><code contenteditable>
-	appModelEvents:{
-		'change:totalPrice':this.calculate
-	}
-						</code></pre>
-					</section>
-					<section>
-						<pre><code contenteditable>
-	modelEvents:{
-		'change:isShow':this.showOrHide,
-		'change:data':this.render
-	},
-						</code></pre>
-					</section>
-				</section>
-				<section>
-					<img data-src="images/data-flow.png" >
-				</section>
+					<!--<section>-->
+						<!--<h2>pageModules</h2>-->
+						<!--<aside class="notes">-->
+							<!--新的框架中，将业务模块强制的定义为由三个部分组成：-->
+							<!--1.model-->
+							<!--2.view-->
+							<!--3.tpl-->
+							<!--在boss3_modules中按文件夹进行划分-->
+							<!--pageModules模块会自动的根据一个叫做modules.json的文件对模块进行加载、初始化。-->
+							<!--这样做的好处是，既可以减去模块初始化的重复操作，也可以对模块进行动态依赖管理。通过简单的增减modules.json来配置页面所依赖的模块。-->
+							<!--然后是eventBus-->
+						<!--</aside>-->
+					<!--</section>-->
+					<!--<section>-->
+						<!--<h2>eventBus</h2>-->
+						<!--<a href="http://wiki.tuniu.org/display/INT/eventBus+API">document</a>-->
+						<!--<aside class="notes">-->
+							<!--eventBus作为页面的事件中枢，代替了原来的main.js的角色。与main.js不同的是，在新的框架中，我们要求将eventBus做为一个事件触发器，强制-->
+							<!--注入到各个子业务模块中。所有的模块间通信事件只能通过eventBus.bind来进行绑定，并通过eventBus.trigger来触发。-->
+							<!--事件是通过key-value的形式绑定在eventBus上的，这样我们便可以维护一个整体的事件对象，通过配置的方式增减页面事件。-->
+							<!--需要提到的是eventBus实现了一个套middleware的机制，通过增加自定义middlware,可以实现页面事件的日志、依赖管理等操作。-->
+							<!--此外eventBus还提供了异步事件流程管理、事件节流等实用功能，在此就不一一赘述了，需要详细了解，并充分利用eventBus的功能可参看api文档。-->
+						<!--</aside>-->
+					<!--</section>-->
+					<!--<section>-->
+						<!--<h2>backbone extension</h2>-->
+						<!--<ul>-->
+							<!--<li class="fragment grow">appExt</li>-->
+							<!--<li class="fragment grow">modelExt</li>-->
+							<!--<li class="fragment grow">viewExt</li>-->
+						<!--</ul>-->
+						<!--<aside class="notes">-->
+							<!--此外为了优化开发体验，在原有backbone的基础上做了一些扩展。-->
+							<!--appExt在backbone对象上扩展了一个app属性,作为全局model。-->
+							<!--modelExt在model的实例中增加了appModelEvents属性用以对全局model的变化事件进行监听。-->
+							<!--viewExt则是在view的实例上增加了modelEvents属性用以定义model属性的变化事件。-->
+							<!--有了以上扩展，在面临多模块公用数据变化的时候，只需要在各个模块中定义好全局属性的监听操作，便可以省去手动在pageEvent里触发各模块数据变更的操作。-->
+						<!--</aside>-->
+					<!--</section>-->
+					<!--<section>-->
+						<!--<pre><code contenteditable>-->
+	<!--appModelEvents:{-->
+		<!--'change:totalPrice':this.calculate-->
+	<!--}-->
+						<!--</code></pre>-->
+					<!--</section>-->
+					<!--<section>-->
+						<!--<pre><code contenteditable>-->
+	<!--modelEvents:{-->
+		<!--'change:isShow':this.showOrHide,-->
+		<!--'change:data':this.render-->
+	<!--},-->
+						<!--</code></pre>-->
+					<!--</section>-->
+				<!--</section>-->
+				<!--<section>-->
+					<!--<img data-src="images/data-flow.png" >-->
+				<!--</section>-->
 
 
-				<section>
-					<section>
-						<img src="images/modules.png" alt=""/>
-					</section>
-					<section>
-						<img src="images/module.png" alt=""/>
-					</section>
-					<section>
-						<img src="images/module.png" alt=""/>
-					</section>
-				</section>
-				<section>
-					<h3>模块可配置化</h3>
-					<ul>
-						<li class="fragment">模块加载器</li>
-						<li class="fragment">全局事件对象</li>
-						<li class="fragment">依赖关系图谱</li>
-						<li class="fragment">实现事件的动态绑定</li>
-						<li class="fragment">webpack静态解析依赖,实现事件预绑定</li>
-					</ul>
-				</section>
-				<section>
-					<h3>eventbus</h3>
-					<ul>
-						<li class="fragment">事件中枢</li>
-						<li class="fragment">日志调试</li>
-						<li class="fragment">异步事件节流</li>
-					</ul>
-				</section>
-				<section>
-					<h2>模块化的意义</h2>
-					<ul>
-						<li class="fragment grow">解决命名冲突</li>
-						<li class="fragment grow">代码复用</li>
-						<li class="fragment grow">提高代码可维护性</li>
-					</ul>
-					<aside class="notes">
-						模块化的意义，大致有以下几点：解决前端命名冲突、方便代码复用、提高代码可维护性，这里就不详细讲解了。
-					</aside>
-				</section>
+				<!--<section>-->
+					<!--<section>-->
+						<!--<img src="images/modules.png" alt=""/>-->
+					<!--</section>-->
+					<!--<section>-->
+						<!--<img src="images/module.png" alt=""/>-->
+					<!--</section>-->
+					<!--<section>-->
+						<!--<img src="images/module.png" alt=""/>-->
+					<!--</section>-->
+				<!--</section>-->
+				<!--<section>-->
+					<!--<h3>模块可配置化</h3>-->
+					<!--<ul>-->
+						<!--<li class="fragment">模块加载器</li>-->
+						<!--<li class="fragment">全局事件对象</li>-->
+						<!--<li class="fragment">依赖关系图谱</li>-->
+						<!--<li class="fragment">实现事件的动态绑定</li>-->
+						<!--<li class="fragment">webpack静态解析依赖,实现事件预绑定</li>-->
+					<!--</ul>-->
+				<!--</section>-->
+				<!--<section>-->
+					<!--<h3>eventbus</h3>-->
+					<!--<ul>-->
+						<!--<li class="fragment">事件中枢</li>-->
+						<!--<li class="fragment">日志调试</li>-->
+						<!--<li class="fragment">异步事件节流</li>-->
+					<!--</ul>-->
+				<!--</section>-->
+				<!--<section>-->
+					<!--<h2>模块化的意义</h2>-->
+					<!--<ul>-->
+						<!--<li class="fragment grow">解决命名冲突</li>-->
+						<!--<li class="fragment grow">代码复用</li>-->
+						<!--<li class="fragment grow">提高代码可维护性</li>-->
+					<!--</ul>-->
+					<!--<aside class="notes">-->
+						<!--模块化的意义，大致有以下几点：解决前端命名冲突、方便代码复用、提高代码可维护性，这里就不详细讲解了。-->
+					<!--</aside>-->
+				<!--</section>-->
 			</div>
 
 		</div>
