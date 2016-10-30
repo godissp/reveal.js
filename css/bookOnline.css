@@ -8,3 +8,7 @@
     animation:rotate360 1.5s;
     animation-fill-mode : forwards
 }
+
+pre>code{
+    tab-size: 4;
+}

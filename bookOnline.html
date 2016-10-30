@@ -46,13 +46,12 @@
 					<h2>模块化编程</h2>
 					<p>在线预定前端框架重构</p>
 					<aside class="notes">
-						大家好，我今天要讲的内容是,模块化编程 在线预订前端框架重构,这也是这段时间杰哥交给我等主要工作。
-						说到模块化,其实在我来途牛之前，我们在线预订的模块化工作就已经展开并完成很多了。
-						因此这段时间，我的工作更多的是对原有技术体系的优化。下面来看看我们的工程做了哪些改变。
+
 					</aside>
 				</section>
 				<section>
 					<section>
+						<h2>First Change</h2>
 						<div>
 							<span>main.js</span>
 							<span> → </span>
@@ -68,6 +67,21 @@
 							下面我们来详细看一看eventBus的用法.
 						</aside>
 					</section>
+					<section>
+						<h4 style="text-align: left">M V *  == M V + main.js</h4>
+						<h4 style="text-align: left; color: #ff44da;" class="fragment">M V *  == M V + EventBus</h3>
+						<h2 style="text-align: left;color: #000000;float: right;position: relative;top: -120px;" class="fragment">Controller</h2>
+
+
+						<aside class="notes">
+							这是一段最简单的eventBus使用示例
+							通过bind方法绑定eventA事件，
+							然后在任何一个引入eventBus的地方trigger eventA事件，便可执行事件内容得到返回值。
+							当然除了基础的用法，eventBus还提供了
+							异步事件流程控制、事件节流、中间件扩展、频道扩展事件广播等高级功能。感兴趣的同学可以自己去看看api，也欢迎随时与我交流。
+						</aside>
+					</section>
+
 					<section>
 					<pre><code contenteditable>
 	eventBus.bind({
@@ -128,6 +142,7 @@
 				</section>
 				<section>
 					<section>
+						<h2>Second Change</h2>
 						<div>
 							<span>Backbone</span>
 							<span> → </span>
@@ -140,10 +155,24 @@
 						</aside>
 					</section>
 					<section>
+						<img src="images/pageState1.png" alt="" style="border: none;box-shadow: none;">
+						<aside class="notes">
+						</aside>
+					</section>
+					<section>
+						<img src="images/pageState2.png" alt="" style="border: none;box-shadow: none;">
+						<aside class="notes">
+						</aside>
+					</section>
+					<section>
 						<pre><code contenteditable>
 	appModelEvents:{
-		'change:totalPrice':this.calculate
+		'change:totalPrice':function(){
+			console.log('total price has changed' )
+		}
 	}
+	backbone.app.set('totalPrice','10000')
+	//total price has changed
 						</code></pre>
 						<aside class="notes">
 							在各个子模型中，通过配置appModelEvent配置项，可实现全局模型的状态监听，这就把一些多对多的状态依赖关系，转换成了多对一的依赖关系
@@ -162,40 +191,124 @@
 							大家手动监听model的过程。
 						</aside>
 					</section>
+					<section>
+						<img data-src="images/data-flow.png"  style="box-shadow: none;border: none;">
+					</section>
 				</section>
 				<section>
-					<div>
-						<span>Callback</span>
-						<span> → </span>
-						<span class="fragment highlight-red">Promise</span>
-					</div>
-					<aside class="notes">
-						然后就是Callback转promise，Promise的好处我这里就不赘述了，为了避免回调地狱，做异步流程控制。
-						这里值得提起的是，其实eventBus也实现了一个类Promise的接口，可以进行异步事件的流程管理，详情可以看看api。
-					</aside>
-				</section>
-				<section>
-					<div>
-						<span>RequireJs</span>
-						<span> → </span>
-						<span class="fragment highlight-red">Webpack</span>
-					</div>
-					<aside class="notes">
-						最后就是模块管理器的变更，require是一项伟大的发明，他的出现让javascript制作多人维护的大型项目变成了事实。
-						但在面临更高的性能要求的时候，require的纯异步加载会产生阻力，因此我们考虑用webpack进行替换。
-						与requirejs不同webpack在上线之前，便做了代码的静态打包，在打包的过程中，
-						可以根据配置项进行代码合并、混淆、拆分、转化等不同种类的优化工作。
-						有其loader和plugin是可以扩展的，因此在实际项目中可根据实际需求对各个模块的代码进行预处理。
-						举个栗子，在webpack中可加入eslint-loader对代码进行规范，避免低级bug的发生。
-					</aside>
-				</section>
-				<section>
-					<ul>
-						<li></li>
-					</ul>
+					<section>
+						<div>
+							<span>Callback</span>
+							<span> → </span>
+							<span class="fragment highlight-red">Promise</span>
+						</div>
+						<aside class="notes">
+							然后就是Callback转promise，Promise的好处我这里就不赘述了，为了避免回调地狱，做异步流程控制。
+							这里值得提起的是，其实eventBus也实现了一个类Promise的接口，可以进行异步事件的流程管理，详情可以看看api。
+						</aside>
+					</section>
+					<section>
+						<ul>
+							<li>异步流程控制</li>
+							<li>代码扁平化</li>
+						</ul>
+					</section>
+					<section>
+						<ul>
+							<li>Jquery Promise</li>
+							<li class="fragment">EventBus Promise</li>
+						</ul>
+					</section>
+					<section>
+						<h3>EventBus 中的事件要素</h3>
+						<ul>
+							<li class="fragment">事件类型</li>
+							<li class="fragment">参数</li>
+							<li class="fragment">同步返回值</li>
+							<li class="fragment"><span>异步返回值</span><span class="fragment" style="color: red;"> → Promise</span></li>
+						</ul>
+					</section>
+					<section>
+						<pre><code style="font-size: 15px;line-height: 12px;tab-size: 5;">
+	eventBus.bind({
+		eventA:function(v){
+			var self  = this
+			setTimeout(function(){
+				self.resolve(v+'done in 2s')//类promise，resolve表示异步返回成功。失败使用this.reject方法
+			},2000)
+			return v+' done';
+		}，
+		eventB:function(v){
+			var self  = this
+			setTimeout(function(){
+				self.resolve(v+'done in 5s')
+			},5000)
+			return v+' done';
+		}
+	})
+	var result = eventBus.trigger('eventA','hello world');
+	console.log(result.retuanValue)
+	result.then(function(v){
+		console.log(v)
+	})
+	//hello world done
+	//hello world done in 2s
 
+	var result = eventBus.trigger(['eventA','eventB'],'hello world');
+	console.log(result.retuanValue)
+	//['hello world done','hello world done']  //eventA和eventB同步返回结果
 
+	result.all(function(v){
+		console.log(v)
+		//['hello world done in 2s','hello world done in 5s'] //两个事件异步返回结果
+	})
+						</code></pre>
+
+					</section>
 				</section>
+				<section>
+					<section>
+						<div>
+							<span>RequireJs</span>
+							<span> → </span>
+							<span class="fragment highlight-red">Webpack</span>
+						</div>
+						<aside class="notes">
+							最后就是模块管理器的变更，require是一项伟大的发明，他的出现让javascript制作多人维护的大型项目变成了事实。
+							但在面临更高的性能要求的时候，require的纯异步加载会产生阻力，因此我们考虑用webpack进行替换。
+							与requirejs不同webpack在上线之前，便做了代码的静态打包，在打包的过程中，
+							可以根据配置项进行代码合并、混淆、拆分、转化等不同种类的优化工作。
+							有其loader和plugin是可以扩展的，因此在实际项目中可根据实际需求对各个模块的代码进行预处理。
+							举个栗子，在webpack中可加入eslint-loader对代码进行规范，避免低级bug的发生。
+						</aside>
+					</section>
+					<section>
+						<ul>
+							<li>代码混淆</li>
+							<li class="fragment">模块合并</li>
+							<li class="fragment">代码分割</li>
+							<li class="fragment">异步加载</li>
+						</ul>
+					</section>
+					<section>
+						<div>
+							io性能提升
+						</div>
+					</section>
+					<section>
+						<h3>Loader</h3>
+						<ul>
+							<li>es6</li>
+							<li>自动构建</li>
+							<li>css模块化</li>
+							<li>代码检查</li>
+						</ul>
+					</section>
+				</section>
+				<section>
+					<h3>工程结构</h3>
+				</section>
+
 
 
 
