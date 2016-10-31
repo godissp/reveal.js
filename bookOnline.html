@@ -4,7 +4,7 @@
 	<head>
 		<meta charset="utf-8">
 
-		<title>reveal.js – The HTML Presentation Framework</title>
+		<title>模块化编程（在线预订前端框架重构）</title>
 
 		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
 		<meta name="author" content="Hakim El Hattab">
@@ -50,35 +50,31 @@
 					</aside>
 				</section>
 				<section>
+					<h3>指导思想</h3>
+					<ul>
+						<li class="fragment">单一职责</li>
+						<li class="fragment">开放闭合</li>
+					</ul>
+					<aside class="notes">
+
+					</aside>
+				</section>
+				<section>
 					<section>
 						<h2>First Change</h2>
 						<div>
 							<span>main.js</span>
 							<span> → </span>
-							<span><a href="http://10.10.36.108/eventBus.html">EventBus</a></span>
+							<span>EventBus</span>
 						</div>
 						<aside class="notes">
-							由于有兼容低版本ie的需求，在pc端我们一直都是用backbone来做前端的mvc的
-							但事实上从我个人理解backbone并没有提供一个完备的mvc方案，在C的层面也就是controller控制器的层面。
-							backbone并没有提供一个很好的角色类供我们完成页面事件分发以及状态管理。
-							在原有架构中，main.js仅仅是通过手动绑定模块事件来达到模块间通信的一个作用。
-							这样做既不利于调试，同时也缺少了状态管理的机制，维护起来难度也更大。
-							因此我在系统中加入了eventBus,eventBus专注于页面的事件管理。和backbone结合起来充当控制器的角色。
-							下面我们来详细看一看eventBus的用法.
 						</aside>
 					</section>
 					<section>
 						<h4 style="text-align: left">M V *  == M V + main.js</h4>
 						<h4 style="text-align: left; color: #ff44da;" class="fragment">M V *  == M V + EventBus</h3>
 						<h2 style="text-align: left;color: #000000;float: right;position: relative;top: -120px;" class="fragment">Controller</h2>
-
-
 						<aside class="notes">
-							这是一段最简单的eventBus使用示例
-							通过bind方法绑定eventA事件，
-							然后在任何一个引入eventBus的地方trigger eventA事件，便可执行事件内容得到返回值。
-							当然除了基础的用法，eventBus还提供了
-							异步事件流程控制、事件节流、中间件扩展、频道扩展事件广播等高级功能。感兴趣的同学可以自己去看看api，也欢迎随时与我交流。
 						</aside>
 					</section>
 
@@ -94,11 +90,6 @@
 	//hello world done
 					</code></pre>
 						<aside class="notes">
-							这是一段最简单的eventBus使用示例
-							通过bind方法绑定eventA事件，
-							然后在任何一个引入eventBus的地方trigger eventA事件，便可执行事件内容得到返回值。
-							当然除了基础的用法，eventBus还提供了
-							异步事件流程控制、事件节流、中间件扩展、频道扩展事件广播等高级功能。感兴趣的同学可以自己去看看api，也欢迎随时与我交流。
 						</aside>
 					</section>
 					<section>
@@ -115,10 +106,6 @@
 	eventBus.trigger('asyncInit')
 					</code></pre>
 						<aside class="notes">
-							再来看看在我们的在线预订项目中，通过eventBus绑定了一个叫做pageEvent的全局事件对象，便实现了控制器的作用。
-							日常开发中，只需要维护这个pageEvent事件对象，便可以增减控制器功能。
-							大家可能注意到了，在这段代码中我调用了两次eventBus的addMiddleware方法，addMiddleware可为eventBus
-							添加自定义中间件，管理事件发生过程中的状态变更和依赖。这里我加入了一个日志中间打印事件日志，和一个depMiddleware来进行模块依赖管理。
 						</aside>
 					</section>
 					<section>
@@ -132,12 +119,16 @@
 	//只会触发参数为hello world3的eventA事件
 						</code></pre>
 						<aside class="notes">
-							这里还要介绍一个triggerAsyncOnce方法，事件节流函数。
-							在我们的系统中，各个模块之间的状态往往是互相影响的，例如优惠信息模块，当我们更改保险、登陆、修改人数、单房差等等操作
-							都需要发起一次优惠信息更新的操作。这就导致了一些经常性的操作会导致发起多次优惠信息的请求，影响到了页面的性能。
-							鉴于这种情况，只需要将发起优惠组合请求的操作单独封装成一个事件，再通过triggerAsyncOnce函数触发，就可以保证在一次
-							js事件周期内的所有触发都会被省略只保留最后一次事件触发进行调用。
 						</aside>
+					</section>
+					<section>
+						<h3>Other</h3>
+						<ul>
+							<li class="fragment">Channel</li>
+							<li class="fragment">Broadcast</li>
+							<li class="fragment">Async Event</li>
+							<li class="fragment"><a href="http://10.10.36.108/eventBus.html">EventBus API</a></li>
+						</ul>
 					</section>
 				</section>
 				<section>
@@ -247,7 +238,7 @@
 		}
 	})
 	var result = eventBus.trigger('eventA','hello world');
-	console.log(result.retuanValue)
+	console.log(result.returnValue)
 	result.then(function(v){
 		console.log(v)
 	})
@@ -283,30 +274,25 @@
 						</aside>
 					</section>
 					<section>
-						<ul>
-							<li>代码混淆</li>
-							<li class="fragment">模块合并</li>
-							<li class="fragment">代码分割</li>
-							<li class="fragment">异步加载</li>
-						</ul>
-					</section>
-					<section>
-						<div>
-							io性能提升
+						<!--<ul>-->
+							<!--<li>静态打包</li>-->
+							<!--<li class="fragment">代码混淆</li>-->
+							<!--<li class="fragment">代码分割</li>-->
+							<!--<li class="fragment">异步加载</li>-->
+						<!--</ul>-->
+						<h4 style="text-align: left">静态打包</h4>
+						<h4 style="text-align: left" class="fragment">代码混淆</h4>
+						<h4 style="text-align: left" class="fragment">代码分割</h4>
+						<h4 style="text-align: left" class="fragment">语法转换</h4>
+						<h4 style="text-align: left" class="fragment">代码规范管理</h4>
+						<div class="fragment">
+							<h2 style="text-align: left;color: #000000;float: right;position: relative;top: -200px;right:175px;" class="fragment">+人效</h2>
+							<h2 style="text-align: left;color: #000000;float: right;position: relative;top: -200px;right:175px;" class="">性能</h2>
 						</div>
-					</section>
-					<section>
-						<h3>Loader</h3>
-						<ul>
-							<li>es6</li>
-							<li>自动构建</li>
-							<li>css模块化</li>
-							<li>代码检查</li>
-						</ul>
 					</section>
 				</section>
 				<section>
-					<h3>工程结构</h3>
+					<h3>工程代码结构介绍</h3>
 				</section>
 
 
