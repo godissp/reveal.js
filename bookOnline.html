@@ -46,7 +46,10 @@
 					<h2>模块化编程</h2>
 					<p>在线预定前端框架重构</p>
 					<aside class="notes">
-
+						今天要讲的内容是，模块化编程、在线预订前端框架重构。<br/>
+						其实在我来途牛之前，我们在线预订的模块化工作就已经展开了，之前的模式是基于requirejs＋backbone。<br/>
+						因此，我这段时间的工作，更加侧重于在原有技术体系的基础上，对我们前端模块化编程进行优化。<br/>
+						下面我就给大家介绍一下，这段时间所做的一些改变。
 					</aside>
 				</section>
 				<section>
@@ -56,7 +59,12 @@
 						<li class="fragment">开放闭合</li>
 					</ul>
 					<aside class="notes">
-
+						在逐一介绍改动点之前，我想先提一下设计模式中的两个原则。<br/>
+						一个是单一职责原则。<br/>
+						一个是开放关闭原则。<br/>
+						上周有听赵国光大拿演讲的同学应该对这两个原则有所映像，这里我就不再赘述概念了。<br/>
+						但之所以要提一下这两个原则是因为在重构的过程中，这两个原则起着一定的指导性作用。<br/>
+						各位在日常写代码的过程中，谨记这两个原则，对我们的代码质量提升肯定也是有所帮助的。
 					</aside>
 				</section>
 				<section>
@@ -68,6 +76,9 @@
 							<span>EventBus</span>
 						</div>
 						<aside class="notes">
+							下面是第一个改动点,从main.js 到 eventBus。<br/>
+							这里需要提到，由于在pc端仍然存在着兼容低版本IE浏览器的需求，因此在前端的mvc方面，我们沿用了backbone。<br/>
+							但backbone恰如其名，仅仅是一个骨架，并没有实现mvc的一套完整的约束，尤其是controller层，并没有一个比较成熟的实现。
 						</aside>
 					</section>
 					<section>
@@ -75,6 +86,12 @@
 						<h4 style="text-align: left; color: #ff44da;" class="fragment">M V *  == M V + EventBus</h3>
 						<h2 style="text-align: left;color: #000000;float: right;position: relative;top: -120px;" class="fragment">Controller</h2>
 						<aside class="notes">
+							在原有的框架中，我们通过在main.js中以命令式编程的方式手动绑定模块事件，各模块中触发相应事件，以达到一个controller的作用的。<br/>
+							但这样做，存在一些问题。<br/>
+							一是事件绑定可以在任何地方进行，很容易分散，不利于跟踪调试。<br/>
+							二是简单的事件绑定机制并不足以维护页面事件的状态以及依赖。<br/>
+							这些便导致了当我们的系统功能日渐复杂的时候，开发效率会降低。<br/>
+							针对这些问题，在新的框架中我加入了eventBus来单独管理页面事件，充当控制器的角色。
 						</aside>
 					</section>
 
@@ -90,6 +107,12 @@
 	//hello world done
 					</code></pre>
 						<aside class="notes">
+							我们先来看一条最简单的例子。<br/>
+							代码中先是通过eventBus.bind方法，将eventA事件绑定到全局事件对象中。<br/>
+							再通过eventBus.trigger方法触发该事件。<br/>
+							与之前各模块独自绑定事件不同的是，eventBus通过bind方法将所有事件统一绑定，以达到统一管理的目的。<br/>
+							体现到项目中，在系统初始化的阶段，我们会绑定一个pageEvent的事件对象，该事件对象包含了页面所有的控制器逻辑。<br/>
+							绑定之后，再将eventBus注入到各个子模块中，这样各个子模块便可以通过eventBus这个桥梁触发全局事件。
 						</aside>
 					</section>
 					<section>
@@ -106,10 +129,25 @@
 	eventBus.trigger('asyncInit')
 					</code></pre>
 						<aside class="notes">
+							PC的小伙伴们应该能看出来，这便是我们在线预订的前端初始化逻辑。<br/>
+							可以看到的是，除了我上面所提到的事件绑定与触发的方法以外，在绑定事件之前，我调用了一个叫做addMiddleware的方法。<br/>
+							大家来猜猜看它的作用是什么呢？<br/>
+							顾名思义，addMiddleware就是添加中间件的意思。<br/>
+							类似于nodejs和redux中的中间件，eventBus的中间件给了我们一次分类处理事件的机会。<br/>
+							在middleware中，我们可以拿到事件名称、参数、返回值，可以阻断事件，派发其他事件，还可以拿到当前事件所处在事件树、事件层级等等。<br/>
+							有了middleware，我们可以对页面事件进行状态管理、流程管理。<br/>
+							项目中我加入了两个中间件，一个是用来管理页面事件和模块之间的依赖关系。一个用来添加调试日志。<br/>
+							各位在今后的开发中也可以开发属于自己的中间件。
 						</aside>
 					</section>
 					<section>
 						<img src="images/relate.png" alt="" style="border: none;box-shadow: none"/>
+						<aside class="notes">
+							我们再来看一下这张图。<br/>
+							这张图描述了我们在线预订系统中，各个模块与优惠、保险模块的状态依赖关系图。<br/>
+							我们可以看到，几乎每一个模块的改变都会引起，优惠模块的数据刷新。<br/>
+							由此而带来了一个问题：在日常开发中，稍不注意，就会导致优惠模块的数据的重复获取，从而造成性能损失。
+						</aside>
 					</section>
 					<section>
 						<pre><code contenteditable>
@@ -119,6 +157,10 @@
 	//只会触发参数为hello world3的eventA事件
 						</code></pre>
 						<aside class="notes">
+							针对这个问题，eventBus提供了异步事件节流机制。<br/>
+							如这段代码，在绑定了eventA之后，我连续触发了三次eventA事件，但最终仅仅会执行最后一次触发的事件。<br/>
+							触发的方式仅仅由trigger改为了triggerAsyncOnce。<br/>
+							需要提到的是，这里的事件节流，针对是一次js事件循环以内的节流，如果是在异步事件的回调中再次出发该事件的话，则会开始第二次节流。
 						</aside>
 					</section>
 					<section>
@@ -129,6 +171,10 @@
 							<li class="fragment">Async Event</li>
 							<li class="fragment"><a href="http://10.10.36.108/eventBus.html">EventBus API</a></li>
 						</ul>
+						<aside class="notes">
+							除了以上介绍的一些常用功能外，eventBus还提供了：<br/>
+							多频道、频道广播、异步事件流程管理等功能，感兴趣的同学，可以去wiki上详细的看看api，也欢迎随时跟我讨论交流。
+						</aside>
 					</section>
 				</section>
 				<section>
@@ -140,19 +186,27 @@
 							<span class="fragment highlight-red">Backbone With Extension</span>
 						</div>
 						<aside class="notes">
-							改变的第二点是对Backbone做了一定程度的扩展，在之前的页面中，我们各个模块的数据都是独立维护的，对于页面公共状态，并没有做到
-							很好的维护，当一些全局状态变更时，我们的做法是通过控制器来分发操作各个模块的模型变化，这样做当遇到很复杂的数据变更时代码将变得
-							很难维护。因此在新的架构中，我加入了一些backbone的扩展。维护了一个全局模型对象并注入到了Backbone.app中。
+							改动的第二点，是在backbone的基础上做了一定程度的扩展。<br/>
+							我们知道，在用backbone开发的过程当中，经常会创建一些model用来维护模块自身状态。<br/>
+							在多个模块并存的时候，往往几个模块会共享一个相同的状态。<br/>
+							当状态改变时，状态变更如何传播成为一种问题
 						</aside>
 					</section>
 					<section>
 						<img src="images/pageState1.png" alt="" style="border: none;box-shadow: none;">
 						<aside class="notes">
+							为了维护状态变更。<br/>
+							一种做法是，当一个模块的某个状态改变之后，派发一个事件依次改变其他关联模块的状态。<br/>
+							这就会形成如上图所示的这种情况。一旦模块规模增大，状态转换关系增多，这种状态的变更就会越来越难维护，也会给页面增加很多冗余事件。
 						</aside>
 					</section>
 					<section>
 						<img src="images/pageState2.png" alt="" style="border: none;box-shadow: none;">
 						<aside class="notes">
+							而另一种做法则是建立起一个全局状态对象，用以维护公共状态。<br/>
+							在每个模块内设置监听函数，用来对公共状态对象的变化做出响应。<br/>
+							这就形成了如这张图所示的情况。<br/>
+							这种情况下，模块与模块之间不会形成交叉依赖。
 						</aside>
 					</section>
 					<section>
@@ -166,8 +220,10 @@
 	//total price has changed
 						</code></pre>
 						<aside class="notes">
-							在各个子模型中，通过配置appModelEvent配置项，可实现全局模型的状态监听，这就把一些多对多的状态依赖关系，转换成了多对一的依赖关系
-							实际开发中更易维护。
+							重构之后，我们在backbone对象中加入了一个叫做app的全局数据模型，用以管理共有状态。<br/>
+							在开发模块时，只需要在各个model中进行如下配置，便可对全局数据模型进行监听。<br/>
+							这段代码对全局数据模型的totalPrice字段进行了监听，当totalPrice的数据发生变更时，便会触发监听回调函数的执行。<br/>
+							需要注意的是，对全局状态的变更需要遵循backbone的规则，用set函数进行变更，否则子模块将无法响应状态变更事件。
 						</aside>
 					</section>
 					<section>
@@ -178,37 +234,58 @@
 	}
 						</code></pre>
 						<aside class="notes">
-							另外，为了方便，在各个view中我也加入了一个modelEvents的配置项，用来监听model的变化，这样就省去了
-							大家手动监听model的过程。
+							同样的，在各个子模块的view当中，也相应加入了modelEvents配置项，用以监听各个子模块模型的变化。<br/>
+							省去了手动绑定监听的操作
 						</aside>
 					</section>
 					<section>
 						<img data-src="images/data-flow.png"  style="box-shadow: none;border: none;">
+						<aside class="notes">
+							于是最终比较理想的状态，是这样的。<br/>
+							各个模块维护自身的状态模型，并依赖于全局数据模型中的公共部分。<br/>
+							这样前提下，在对各个模块进行开发的过程中，程序员只需要关注本模块所依赖的公共状态，以及自身状态，而无需理会模块间的数据交互。<br/>
+							从而解耦了页面状态，使程序更易于扩展（符合最少知识原则）。
+						</aside>
 					</section>
 				</section>
 				<section>
 					<section>
+						<h2>Third Change</h2>
 						<div>
 							<span>Callback</span>
 							<span> → </span>
 							<span class="fragment highlight-red">Promise</span>
 						</div>
 						<aside class="notes">
-							然后就是Callback转promise，Promise的好处我这里就不赘述了，为了避免回调地狱，做异步流程控制。
-							这里值得提起的是，其实eventBus也实现了一个类Promise的接口，可以进行异步事件的流程管理，详情可以看看api。
+							第三个改动点是，从回调 到 promise。<br/>
+							写javascript的，在日常开发中都会面临很多异步编程的场景，针对此类场景，最基础的解决方案是用回调函数。<br/>
+							但是，当遇到一些复杂场景的时候，这种处理方式往往会使人崩溃，异步回调一层套一层，中间还夹杂着一些状态变更，我们通常称之为回调地狱。
 						</aside>
 					</section>
 					<section>
+						<h2>Last Change</h2>
 						<ul>
 							<li>异步流程控制</li>
 							<li>代码扁平化</li>
 						</ul>
+						<aside class="notes">
+							为了不让回调地狱毁了我们的代码，大神们想出了各种各样的办法，有async、promise、generate等等。<br/>
+							而最常用的，也是比较基础的解决方案，就是使用promise。<br/>
+							promise可以帮助实现简单的异步流程控制，使我们的代码扁平化。
+						</aside>
 					</section>
 					<section>
 						<ul>
 							<li>Jquery Promise</li>
 							<li class="fragment">EventBus Promise</li>
 						</ul>
+						<aside class="notes">
+							在我们的项目中，有两个地方实现了promise规范。<br/>
+							一个是异步数据获取，jquery提供了一套promise的api。<br/>
+							另一个就是异步事件，eventBus也实现了一套类Promise的api。<br/>
+							jquery的实现我就不详细介绍了，大家可以参照其文档，主要是使用ajax的done、fail、then以及when这几个方法。<br/>
+							下面主要介绍一下eventBus的异步事件
+						</aside>
 					</section>
 					<section>
 						<h3>EventBus 中的事件要素</h3>
@@ -218,6 +295,14 @@
 							<li class="fragment">同步返回值</li>
 							<li class="fragment"><span>异步返回值</span><span class="fragment" style="color: red;"> → Promise</span></li>
 						</ul>
+						<aside class="notes">
+							这里需要提到eventBus中事件的几个要素。<br/>
+							一个是事件类型，也就是事件的名称<br/>
+							第二个是参数，触发事件所传入的参数<br/>
+							第三个是同步返回值，为什么叫同步返回值呢？因为还有对应的异步返回值。<br/>
+							这就好比我打电话给涛哥，让涛哥改个bug，涛哥先跟我说好然后就去改bug了，改完了之后，涛哥又回了我一个电话讲了一下改动点。<br/>
+							这里‘我让涛哥改bug’就是事件名称；涛哥答应了说‘好’，这就是同步返回结果；‘改bug’的过程就是事件的执行；bug改完了涛哥回电话给我讲的内容就是异步返回值。
+						</aside>
 					</section>
 					<section>
 						<pre><code style="font-size: 15px;line-height: 12px;tab-size: 5;">
@@ -254,7 +339,16 @@
 		//['hello world done in 2s','hello world done in 5s'] //两个事件异步返回结果
 	})
 						</code></pre>
-
+						<aside class="notes">
+							再来看看这段代码。<br/>
+							在这个例子中，通过bind方法绑定了两个事件。<br/>
+							两个事件中都有相应的事件处理逻辑。<br/>
+							每个事件都通过return方法返回了一个值，这便是同步返回的结果。<br/>
+							在事件中，延时执行的部分this.resolve()方法便是将异步返回的结果通知出来。<br/>
+							触发时，我们会得到一个result的类promise对象。我们可以通过result.returnValue获得同步返回结果。<br/>
+							也可以通过result.then方法获得异步返回结果。<br/>
+							针对多时间同时触发的情况，eventBus也扩展了all和race方法，用来进行异步事件流程管理。
+						</aside>
 					</section>
 				</section>
 				<section>
@@ -265,12 +359,11 @@
 							<span class="fragment highlight-red">Webpack</span>
 						</div>
 						<aside class="notes">
-							最后就是模块管理器的变更，require是一项伟大的发明，他的出现让javascript制作多人维护的大型项目变成了事实。
-							但在面临更高的性能要求的时候，require的纯异步加载会产生阻力，因此我们考虑用webpack进行替换。
-							与requirejs不同webpack在上线之前，便做了代码的静态打包，在打包的过程中，
-							可以根据配置项进行代码合并、混淆、拆分、转化等不同种类的优化工作。
-							有其loader和plugin是可以扩展的，因此在实际项目中可根据实际需求对各个模块的代码进行预处理。
-							举个栗子，在webpack中可加入eslint-loader对代码进行规范，避免低级bug的发生。
+							最后一点改动，也是跟前端工程化相关的改动点就是模块管理器的变更。<br/>
+							我们用webpack替代了requireJs进行了模块化管理。为什么要替换呢？<br/>
+							我们前端代码的优化主要是围绕着可维护性和性能展开的，除了模块化管理之外，我们还要编译sass、模板，做代码检查，代码分割等。<br/>
+							这些都需要一个静态构建的过程。为了让这些构建任务统一起来，单单一个requirejs已经不能够胜任。<br/>
+							我们需要围绕着nodejs搭建一套完整的构建流程。而webpack+gulp则是众多解决方案中比较优秀的一种。
 						</aside>
 					</section>
 					<section>
@@ -289,10 +382,18 @@
 							<h2 style="text-align: left;color: #000000;float: right;position: relative;top: -200px;right:175px;" class="fragment">+人效</h2>
 							<h2 style="text-align: left;color: #000000;float: right;position: relative;top: -200px;right:175px;" class="">性能</h2>
 						</div>
+						<aside class="notes">
+							webpack除了最基础的代码合并之外，异步加载之外，还可通过扩展loader以及plugins，进行很多批处理以及优化的工作。<br/>
+							如代码混淆，代码分割，语法转换，代码规范管理等等。这些都是提高我们日常工作效率，以及优化页面io性能的必要手段。
+						</aside>
 					</section>
 				</section>
 				<section>
 					<h3>工程代码结构介绍</h3>
+					<aside class="notes">
+						webpack除了最基础的代码合并之外，异步加载之外，还可通过扩展loader以及plugins，进行很多批处理以及优化的工作。<br/>
+						如代码混淆，代码分割，语法转换，代码规范管理等等。这些都是提高我们日常工作效率，以及优化页面io性能的必要手段。
+					</aside>
 				</section>
 
 
@@ -482,7 +583,7 @@
 
 			// More info https://github.com/hakimel/reveal.js#configuration
 			Reveal.initialize({
-				controls: true,
+				controls: false,
 				progress: true,
 				history: true,
 				center: true,
